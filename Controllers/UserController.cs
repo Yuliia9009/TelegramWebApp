@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TelegramWebAPI.Data;
 using TelegramWebAPI.Models;
 using TelegramWebAPI.Models.Requests;
+using System.Security.Claims;
 
 namespace TelegramWebAPI.Controllers
 {
@@ -19,44 +20,15 @@ namespace TelegramWebAPI.Controllers
         }
 
         [Authorize]
-        [HttpPost]
-        public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
-        {
-            var b2cUserId = User.FindFirst("sub")?.Value;
-
-            if (string.IsNullOrEmpty(b2cUserId))
-                return Unauthorized("❌ Не удалось получить идентификатор пользователя из токена");
-
-            var existing = await _db.Users.FirstOrDefaultAsync(u => u.B2CUserId == b2cUserId);
-            if (existing != null)
-                return Conflict("👤 Пользователь уже зарегистрирован");
-
-            var user = new User
-            {
-                Id = Guid.NewGuid(),
-                B2CUserId = b2cUserId,
-                Nickname = request.Nickname,
-                DateOfBirth = request.DateOfBirth,
-                PhoneNumber = request.PhoneNumber,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _db.Users.Add(user);
-            await _db.SaveChangesAsync();
-
-            return Ok(user);
-        }
-
-        [Authorize]
         [HttpGet("me")]
         public async Task<IActionResult> GetMyProfile()
         {
-            var b2cUserId = User.FindFirst("sub")?.Value;
-            if (string.IsNullOrEmpty(b2cUserId))
-                return Unauthorized();
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var guid))
+                return Unauthorized("Не удалось получить идентификатор пользователя из токена");
 
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.B2CUserId == b2cUserId);
-            return user == null ? NotFound() : Ok(user);
+            var user = await _db.Users.FindAsync(guid);
+            return user == null ? NotFound("Пользователь не найден") : Ok(user);
         }
 
         [HttpGet("{id}")]
@@ -89,6 +61,33 @@ namespace TelegramWebAPI.Controllers
             _db.Users.Remove(user);
             await _db.SaveChangesAsync();
             return Ok();
+        }
+
+        [Authorize]
+        [HttpPut("me")]
+        public async Task<IActionResult> UpdateCurrentUser([FromBody] UpdateUserRequest request)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var guid))
+                return Unauthorized("Не удалось получить идентификатор пользователя из токена");
+
+            var user = await _db.Users.FindAsync(guid);
+            if (user == null) return NotFound("Пользователь не найден");
+
+            user.Nickname = request.Nickname;
+            user.DateOfBirth = request.DateOfBirth;
+            user.PhoneNumber = request.PhoneNumber;
+
+            await _db.SaveChangesAsync();
+            return Ok(user);
+        }
+        [HttpGet("{id}/status")]
+        public async Task<IActionResult> GetOnlineStatus(Guid id)
+        {
+            var user = await _db.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            return Ok(new { isOnline = user.IsOnline });
         }
     }
 }

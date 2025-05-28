@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TelegramWebAPI.Services;
+using TelegramWebAPI.Services.Interfaces;
 
 namespace TelegramWebAPI.Controllers
 {
@@ -7,7 +8,7 @@ namespace TelegramWebAPI.Controllers
     [Route("api/test-blob")]
     public class BlobTestController : ControllerBase
     {
-        private readonly BlobStorageService _blobService;
+        private readonly IBlobStorageService _blobService;
 
         public BlobTestController(BlobStorageService blobService)
         {

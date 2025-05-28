@@ -1,5 +1,7 @@
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Options;
 using TelegramWebAPI.Models;
+using TelegramWebAPI.Settings;
 
 namespace TelegramWebAPI.Services
 {
@@ -7,20 +9,27 @@ namespace TelegramWebAPI.Services
     {
         private readonly Container _container;
 
-        public CosmosDbService(IConfiguration config)
+        public CosmosDbService(IOptions<AzureCosmosDbSettings> options)
         {
-            var connectionString = config["Azure:AzureCosmosDb:ConnectionString"];
-            var databaseName = config["Azure:AzureCosmosDb:DatabaseName"];
-            var containerName = config["Azure:AzureCosmosDb:ContainerName"];
+            var settings = options.Value;
 
-            var client = new CosmosClient(connectionString);
-            var database = client.GetDatabase(databaseName);
-            _container = database.GetContainer(containerName);
+            if (string.IsNullOrWhiteSpace(settings.ConnectionString))
+                throw new ArgumentNullException(nameof(settings.ConnectionString), "❌ Не указан ConnectionString");
+
+            if (string.IsNullOrWhiteSpace(settings.DatabaseName))
+                throw new ArgumentNullException(nameof(settings.DatabaseName), "❌ Не указано имя базы данных");
+
+            if (string.IsNullOrWhiteSpace(settings.ContainerName))
+                throw new ArgumentNullException(nameof(settings.ContainerName), "❌ Не указано имя контейнера");
+
+            var client = new CosmosClient(settings.ConnectionString);
+            var database = client.GetDatabase(settings.DatabaseName);
+            _container = database.GetContainer(settings.ContainerName);
         }
 
         public async Task<TestMessage> SaveTestMessageAsync()
         {
-            var message = new TestMessage(); 
+            var message = new TestMessage();
             await _container.CreateItemAsync(message, new PartitionKey(message.chatId));
             return message;
         }

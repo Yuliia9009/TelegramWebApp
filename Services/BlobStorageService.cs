@@ -1,10 +1,27 @@
 using Azure.Storage.Blobs;
+using Microsoft.Extensions.Options;
+using TelegramWebAPI.Settings;
+using TelegramWebAPI.Services.Interfaces;
 
 namespace TelegramWebAPI.Services
 {
-    public class BlobStorageService
+    public class BlobStorageService : IBlobStorageService
     {
         private readonly BlobContainerClient _containerClient;
+
+        public BlobStorageService(IOptions<AzureBlobStorageSettings> options)
+        {
+            var settings = options.Value;
+
+            if (string.IsNullOrWhiteSpace(settings.ConnectionString))
+                throw new ArgumentNullException(nameof(settings.ConnectionString), "❌ Не указан ConnectionString в AzureStorage");
+
+            if (string.IsNullOrWhiteSpace(settings.ContainerName))
+                throw new ArgumentNullException(nameof(settings.ContainerName), "❌ Не указан ContainerName в AzureStorage");
+
+            _containerClient = new BlobContainerClient(settings.ConnectionString, settings.ContainerName);
+            _containerClient.CreateIfNotExists();
+        }
 
         public async Task<string> UploadTextAsync(string fileName, string content)
         {
@@ -12,21 +29,6 @@ namespace TelegramWebAPI.Services
             using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(content));
             await blobClient.UploadAsync(stream, overwrite: true);
             return blobClient.Uri.ToString();
-        }
-
-        public BlobStorageService(IConfiguration config)
-        {
-            var connection = config["Azure:AzureStorage:ConnectionString"];
-            var container = config["Azure:AzureStorage:ContainerName"];
-
-            if (string.IsNullOrWhiteSpace(connection))
-                throw new ArgumentNullException(nameof(connection), "❌ Не указан ConnectionString в AzureStorage");
-
-            if (string.IsNullOrWhiteSpace(container))
-                throw new ArgumentNullException(nameof(container), "❌ Не указан ContainerName в AzureStorage");
-
-            _containerClient = new BlobContainerClient(connection, container);
-            _containerClient.CreateIfNotExists();
         }
     }
 }

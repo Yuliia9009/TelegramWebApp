@@ -1,98 +1,115 @@
-using Microsoft.Identity.Web;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using TelegramWebAPI.Services;
-using TelegramWebAPI.Hubs;
-using TelegramWebAPI.Data;
-using Microsoft.OpenApi.Models;
-using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using FluentValidation;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System.Text;
+using TelegramWebAPI.Data;
+using TelegramWebAPI.Hubs;
+using TelegramWebAPI.Models;
+using TelegramWebAPI.Services;
+using TelegramWebAPI.Services.Interfaces;
+using TelegramWebAPI.Settings;
 using FluentValidation.AspNetCore;
+using FluentValidation;
+using Microsoft.Azure.Cosmos;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Controllers + Swagger + FluentValidation
+// 1. Controllers + FluentValidation
 builder.Services.AddControllers()
-    .AddFluentValidation(fv =>
-    {
-        fv.RegisterValidatorsFromAssemblyContaining<Program>();
-    });
+    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<Program>());
 
+// 2. Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "TelegramWebAPI", Version = "v1" });
 
-    options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Type = SecuritySchemeType.OAuth2,
-        Flows = new OpenApiOAuthFlows
-        {
-            AuthorizationCode = new OpenApiOAuthFlow
-            {
-                AuthorizationUrl = new Uri($"https://login.microsoftonline.com/{builder.Configuration["Azure:AdB2C:TenantId"]}/oauth2/v2.0/authorize"),
-                TokenUrl = new Uri($"https://login.microsoftonline.com/{builder.Configuration["Azure:AdB2C:TenantId"]}/oauth2/v2.0/token"),
-                Scopes = new Dictionary<string, string>
-                {
-                    { "openid", "OpenID" },
-                    { "profile", "User profile" }
-                }
-            }
-        }
+        Description = "Введите JWT токен как: Bearer {token}",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey
     });
 
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "oauth2"
-                }
-            },
-            new[] { "openid", "profile" }
+            new OpenApiSecurityScheme { Reference = new OpenApiReference
+                { Type = ReferenceType.SecurityScheme, Id = "Bearer" } },
+            Array.Empty<string>()
         }
     });
 });
 
-// 2. Azure Services
-builder.Services.AddSingleton<CosmosDbService>();
-builder.Services.AddSingleton<SignalRService>();
-builder.Services.AddSingleton<BlobStorageService>();
-builder.Services.AddSingleton(builder.Configuration);
-
-// 3. Authentication (Microsoft Entra External ID)
-builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("Azure:AdB2C"));
-
-builder.Services.AddAuthorization();
-
-// 4. CORS
+// 3. CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 });
 
-// 5. SignalR
-builder.Services.AddSignalR();
+// 4. Authentication: JWT
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    var config = builder.Configuration;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = config["Jwt:Issuer"],
+        ValidAudience = config["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]!))
+    };
+});
 
-// 6. Entity Framework Core
+// 5. Entity Framework (SQL)
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        sqlOptions => sqlOptions.EnableRetryOnFailure()
-    ));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 7. Validation
+// 6. Cosmos DB
+builder.Services.AddSingleton(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new CosmosClient(config["Azure:AzureCosmosDb:ConnectionString"]);
+});
+builder.Services.AddSingleton<CosmosDbService>();
+
+// 7. Azure Blob Storage
+builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
+
+// 8. SignalR
+builder.Services.AddSignalR();
+builder.Services.AddScoped<SignalRService>();
+
+// 9. Пользовательские сервисы
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
+builder.Services.AddScoped<IPasswordHasher<TelegramWebAPI.Models.User>, PasswordHasher<TelegramWebAPI.Models.User>>();
+
+// 10. Конфигурация настроек
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<AzureBlobStorageSettings>(builder.Configuration.GetSection("Azure:AzureStorage"));
+builder.Services.Configure<AzureCosmosDbSettings>(builder.Configuration.GetSection("Azure:AzureCosmosDb"));
+builder.Services.Configure<SignalRSettings>(builder.Configuration.GetSection("Azure:SignalR"));
+
+// 11. Валидация
 builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddValidatorsFromAssemblyContaining<CreateUserRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 var app = builder.Build();
 
-// . Middleware
+// Middleware
 app.UseCors("AllowAll");
 app.UseStaticFiles();
 app.UseRouting();
@@ -102,24 +119,8 @@ app.UseAuthorization();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "TelegramWebAPI v1");
-
-        options.OAuthClientId(builder.Configuration["Azure:AdB2C:ClientId"]);
-        options.OAuthUsePkce();
-        options.OAuthAppName("TelegramWebApp Swagger");
-        options.OAuthScopes("openid", "profile", "email", "https://graph.microsoft.com/User.Read");
-    });
+    app.UseSwaggerUI();
 }
-
-// 7. Logout route
-app.MapGet("/logout", async context =>
-{
-    await context.SignOutAsync();
-    await context.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme);
-    context.Response.Redirect("/swagger/index.html");
-});
 
 app.MapControllers();
 app.MapHub<ChatHub>("/chatHub");

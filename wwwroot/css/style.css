@@ -1,0 +1,93 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #e5ddd5;
+}
+
+#auth {
+    padding: 40px;
+    text-align: center;
+    background-color: #f8f9fa;
+    margin: 100px auto;
+    width: 300px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+#main {
+    display: flex;
+    height: 100vh;
+}
+
+.hidden {
+    display: none;
+}
+
+.sidebar {
+    width: 25%;
+    background-color: #ffffff;
+    border-right: 1px solid #ddd;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.sidebar h3 {
+    margin-top: 0;
+}
+
+.sidebar ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.sidebar li {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #ddd;
+}
+
+.sidebar li:hover {
+    background-color: #f1f1f1;
+}
+
+.chat {
+    width: 75%;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    background-color: #fafafa;
+}
+
+.message-box {
+    flex: 1;
+    padding: 10px;
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+#messageInput {
+    padding: 10px;
+    width: calc(100% - 120px);
+    margin-right: 10px;
+}
+
+button {
+    padding: 10px 15px;
+    margin-top: 5px;
+    background-color: #0088cc;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #006ea3;
+}
+
+input[type="text"],
+input[type="file"] {
+    padding: 10px;
+    width: 90%;
+    margin-bottom: 10px;
+}

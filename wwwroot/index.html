@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Telegram Web</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- SignalR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+  <!-- Иконки -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+
+<body>
+  <!-- Авторизация -->
+  <div id="auth">
+    <h2>Вход по номеру телефона</h2>
+    <input type="text" id="phone" placeholder="+380..." />
+    <button onclick="sendCode()">Отправить код</button><br><br>
+    <input type="text" id="otp" placeholder="Код из СМС" />
+    <button onclick="verifyCode()">Войти</button>
+  </div>
+
+  <!-- Основной интерфейс -->
+  <div id="main" class="hidden">
+    <div class="sidebar">
+      <h3>Контакты</h3>
+      <ul id="contactList"></ul>
+      <button onclick="logout()">Выход</button>
+    </div>
+
+    <div class="chat">
+      <h3>Сообщения</h3>
+      <div id="messages" class="message-box"></div>
+      <input type="text" id="messageInput" placeholder="Напишите сообщение..." />
+      <button onclick="sendMessage()">Отправить</button><br><br>
+      <input type="file" id="fileInput" />
+      <button onclick="sendFile()">Отправить файл</button>
+    </div>
+  </div>
+
+  <script src="js/script.js"></script>
+</body>
+
+</html>

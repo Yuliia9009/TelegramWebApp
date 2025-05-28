@@ -7,7 +7,6 @@ namespace TelegramWebAPI.Models
     {
         [Key]
         public Guid Id { get; set; }
-        public string B2CUserId { get; set; }
 
         [Required]
         public string Nickname { get; set; }
@@ -17,6 +16,11 @@ namespace TelegramWebAPI.Models
 
         public string PhoneNumber { get; set; }
 
+        [Required]
+        public string PasswordHash { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsOnline { get; set; } = false;
     }
 }
