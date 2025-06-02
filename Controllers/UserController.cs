@@ -5,6 +5,7 @@ using TelegramWebAPI.Data;
 using TelegramWebAPI.Models;
 using TelegramWebAPI.Models.Requests;
 using System.Security.Claims;
+using TelegramWebAPI.Services.Interfaces;
 
 namespace TelegramWebAPI.Controllers
 {
@@ -44,9 +45,11 @@ namespace TelegramWebAPI.Controllers
             var user = await _db.Users.FindAsync(id);
             if (user == null) return NotFound();
 
-            user.Nickname = request.Nickname;
-            user.DateOfBirth = request.DateOfBirth;
-            user.PhoneNumber = request.PhoneNumber;
+            if (!string.IsNullOrWhiteSpace(request.Nickname))
+                user.Nickname = request.Nickname;
+            if (request.DateOfBirth.HasValue)
+                user.DateOfBirth = request.DateOfBirth.Value;
+            // user.PhoneNumber = request.PhoneNumber;
 
             await _db.SaveChangesAsync();
             return Ok(user);
@@ -74,13 +77,19 @@ namespace TelegramWebAPI.Controllers
             var user = await _db.Users.FindAsync(guid);
             if (user == null) return NotFound("Пользователь не найден");
 
-            user.Nickname = request.Nickname;
-            user.DateOfBirth = request.DateOfBirth;
-            user.PhoneNumber = request.PhoneNumber;
+            if (!string.IsNullOrWhiteSpace(request.Nickname))
+                user.Nickname = request.Nickname;
+
+            if (request.DateOfBirth.HasValue)
+                user.DateOfBirth = request.DateOfBirth.Value;
+
+            if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
+                user.AvatarUrl = request.AvatarUrl;
 
             await _db.SaveChangesAsync();
             return Ok(user);
         }
+
         [HttpGet("{id}/status")]
         public async Task<IActionResult> GetOnlineStatus(Guid id)
         {
@@ -88,6 +97,61 @@ namespace TelegramWebAPI.Controllers
             if (user == null) return NotFound();
 
             return Ok(new { isOnline = user.IsOnline });
+        }
+
+        [Authorize]
+        [HttpPost("me/avatar")]
+        public async Task<IActionResult> UploadAvatar(IFormFile file, [FromServices] IBlobStorageService blobService)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("Файл не выбран");
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userId, out var guid))
+                return Unauthorized();
+
+            var user = await _db.Users.FindAsync(guid);
+            if (user == null)
+                return NotFound();
+
+            var ext = Path.GetExtension(file.FileName); // например, .png
+            var fileName = $"avatars/{user.Id}{ext}";
+
+            using var stream = file.OpenReadStream();
+            var avatarUrl = await blobService.UploadFileAsync(fileName, stream);
+
+            user.AvatarUrl = avatarUrl;
+            await _db.SaveChangesAsync();
+
+            return Ok(new { avatarUrl });
+        }
+
+        [Authorize]
+        [HttpGet("friends")]
+        public async Task<IActionResult> GetFriends()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userId, out var guid))
+                return Unauthorized("Не удалось определить пользователя");
+
+            var currentUser = await _db.Users.FindAsync(guid);
+            if (currentUser == null)
+                return NotFound("Пользователь не найден");
+
+            // 🔧 Простой вариант — вернуть всех, кроме себя
+            var friends = await _db.Users
+                .Where(u => u.Id != guid)
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Nickname,
+                    u.PhoneNumber,
+                    u.AvatarUrl,
+                    u.IsOnline
+                })
+                .ToListAsync();
+
+            return Ok(friends);
         }
     }
 }

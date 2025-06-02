@@ -10,6 +10,7 @@ namespace TelegramWebAPI.Models
 
         [Required]
         public string Nickname { get; set; }
+        public string? AvatarUrl { get; set; } 
 
         [Required]
         public DateTime DateOfBirth { get; set; }

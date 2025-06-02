@@ -47,8 +47,14 @@ builder.Services.AddSwaggerGen(options =>
 // 3. CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+    options.AddPolicy("AllowAll", b =>
+    {
+        b
+        .AllowAnyOrigin() 
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials(); // важно для SignalR
+    });
 });
 
 // 4. Authentication: JWT
@@ -77,12 +83,15 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // 6. Cosmos DB
-builder.Services.AddSingleton(sp =>
+builder.Services.AddSingleton<CosmosClient>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
-    return new CosmosClient(config["Azure:AzureCosmosDb:ConnectionString"]);
+    var connectionString = config["Azure:AzureCosmosDb:ConnectionString"];
+    return new CosmosClient(connectionString);
 });
+
 builder.Services.AddSingleton<CosmosDbService>();
+builder.Services.AddSingleton<IChatService, ChatService>();
 
 // 7. Azure Blob Storage
 builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
@@ -93,7 +102,6 @@ builder.Services.AddScoped<SignalRService>();
 
 // 9. Пользовательские сервисы
 builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
 builder.Services.AddScoped<IPasswordHasher<TelegramWebAPI.Models.User>, PasswordHasher<TelegramWebAPI.Models.User>>();
 
@@ -110,19 +118,31 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 var app = builder.Build();
 
 // Middleware
-app.UseCors("AllowAll");
-app.UseStaticFiles();
-app.UseRouting();
-app.UseAuthentication();
-app.UseAuthorization();
-
+// 1. Swagger (можно оставить как есть)
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.MapControllers();
-app.MapHub<ChatHub>("/chatHub");
+// 2. Статические файлы (если используешь wwwroot)
+app.UseStaticFiles();
+
+// 3. Routing обязательно до CORS, Auth и MapHub
+app.UseRouting();
+
+// 4. CORS должен быть ДО Auth и Authorization
+app.UseCors("AllowAll");
+
+// 5. Аутентификация и авторизация
+app.UseAuthentication();
+app.UseAuthorization();
+
+// 6. Endpoints
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+    endpoints.MapHub<ChatHub>("/chatHub"); // важно
+});
 
 app.Run();

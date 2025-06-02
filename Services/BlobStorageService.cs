@@ -30,5 +30,11 @@ namespace TelegramWebAPI.Services
             await blobClient.UploadAsync(stream, overwrite: true);
             return blobClient.Uri.ToString();
         }
+        public async Task<string> UploadFileAsync(string fileName, Stream content)
+        {
+            var blobClient = _containerClient.GetBlobClient(fileName);
+            await blobClient.UploadAsync(content, overwrite: true);
+            return blobClient.Uri.ToString();
+        }
     }
 }

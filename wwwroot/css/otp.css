@@ -1,0 +1,125 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #0e0e0e;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.tg-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.tg-login-card {
+    background-color: #1f2c34;
+    padding: 30px;
+    border-radius: 16px;
+    width: 340px;
+    text-align: center;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+}
+
+.tg-logo {
+    width: 120px;
+    height: auto;
+    margin-bottom: 20px;
+}
+
+#logoMonkey {
+    width: 120px;
+    height: auto;
+    transition: opacity 0.005s ease-in-out;
+    opacity: 1;
+}
+
+h2 {
+    font-weight: 500;
+    margin-bottom: 10px;
+    color: #e5e5e5;
+}
+
+.tg-subtext {
+    font-size: 14px;
+    color: #aaa;
+    margin-bottom: 30px;
+}
+
+.form-group {
+    text-align: left;
+    margin-bottom: 24px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #aaa;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    background-color: #2a3942;
+    color: white;
+    font-size: 16px;
+    outline: none;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    background-color: #53bdeb;
+    border: none;
+    color: white;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+button:hover {
+    background-color: #4aaecf;
+}
+
+.tg-footer {
+    margin-top: 20px;
+    font-size: 13px;
+    color: #bbb;
+}
+
+.tg-footer a {
+    color: #53bdeb;
+    text-decoration: none;
+}
+
+.tg-footer a:hover {
+    text-decoration: underline;
+}
+
+.back-button {
+    background: none;
+    color: #53bdeb;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    text-align: left;
+    padding: 0;
+    outline: none;
+    text-decoration: none;
+}
+
+.back-button:hover {
+    background: none;
+    color: #53bdeb;
+    text-decoration: none;
+    cursor: pointer;
+}

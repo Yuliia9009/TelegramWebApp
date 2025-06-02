@@ -1,6 +1,7 @@
 using Microsoft.Azure.Cosmos;
 using TelegramWebAPI.Models.Chat;
 using TelegramWebAPI.Services.Interfaces;
+using Microsoft.Extensions.Configuration;
 
 namespace TelegramWebAPI.Services
 {
@@ -9,14 +10,10 @@ namespace TelegramWebAPI.Services
         private readonly Container _chatContainer;
         private readonly Container _messageContainer;
 
-        public ChatService(CosmosClient client, IConfiguration config)
+        public ChatService(CosmosDbService cosmosDbService)
         {
-            var dbName = config["Azure:AzureCosmosDb:DatabaseName"];
-            var chatContainerName = "Chats";
-            var messageContainerName = config["Azure:AzureCosmosDb:ContainerName"];
-
-            _chatContainer = client.GetContainer(dbName, chatContainerName);
-            _messageContainer = client.GetContainer(dbName, messageContainerName);
+            _chatContainer = cosmosDbService.GetChatContainer();
+            _messageContainer = cosmosDbService.GetMessageContainer();
         }
 
         public async Task<Chat> CreateChatAsync(Chat chat)
@@ -47,6 +44,7 @@ namespace TelegramWebAPI.Services
 
             return result;
         }
+
         public async Task<Message?> GetMessageByIdAsync(string chatId, string messageId)
         {
             try
@@ -62,8 +60,7 @@ namespace TelegramWebAPI.Services
 
         public async Task<Message> UpdateMessageAsync(string messageId, string newText)
         {
-            // Сначала получаем сообщение по ID
-            var message = await GetMessageByIdAsync("your-chat-id-here", messageId); // поправим chatId ниже
+            var message = await GetMessageByIdAsync("your-chat-id-here", messageId); // chatId можно поправить при вызове
 
             if (message == null)
                 throw new Exception("Message not found");
@@ -79,6 +76,7 @@ namespace TelegramWebAPI.Services
 
             return response.Resource;
         }
+
         public async Task<IEnumerable<Chat>> GetChatsForUserAsync(string userId)
         {
             var query = new QueryDefinition("SELECT * FROM c WHERE ARRAY_CONTAINS(c.Participants, @userId)")
@@ -94,6 +92,28 @@ namespace TelegramWebAPI.Services
             }
 
             return result;
+        }
+
+        public async Task<Chat?> GetOrCreatePrivateChatAsync(string user1Id, string user2Id)
+        {
+            var query = new QueryDefinition(
+                "SELECT * FROM c WHERE c.IsGroup = false AND ARRAY_CONTAINS(c.Participants, @user1Id) AND ARRAY_CONTAINS(c.Participants, @user2Id)"
+            )
+            .WithParameter("@user1Id", user1Id)
+            .WithParameter("@user2Id", user2Id);
+
+            var iterator = _chatContainer.GetItemQueryIterator<Chat>(query);
+
+            while (iterator.HasMoreResults)
+            {
+                var response = await iterator.ReadNextAsync();
+                foreach (var chat in response)
+                {
+                    return chat;
+                }
+            }
+
+            return null;
         }
     }
 }

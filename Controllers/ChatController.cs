@@ -13,7 +13,7 @@ namespace TelegramWebAPI.Controllers
     {
         private readonly IChatService _chatService;
 
-        public ChatController(ChatService chatService)
+        public ChatController(IChatService chatService)
         {
             _chatService = chatService;
         }
@@ -73,6 +73,28 @@ namespace TelegramWebAPI.Controllers
         {
             var updatedMessage = await _chatService.UpdateMessageAsync(messageId, newText);
             return Ok(updatedMessage);
+        }
+        [Authorize]
+        [HttpPost("private")]
+        public async Task<IActionResult> CreatePrivateChat([FromBody] CreatePrivateChatRequest request)
+        {
+            var userId = User.FindFirst("sub")?.Value;
+            if (userId == null) return Unauthorized();
+
+            var existingChat = await _chatService.GetOrCreatePrivateChatAsync(userId, request.ParticipantId);
+            if (existingChat != null)
+                return Ok(existingChat);
+
+            var chat = new Chat
+            {
+                IsGroup = false,
+                Participants = new List<string> { userId, request.ParticipantId },
+                Name = "Личный чат",
+                CreatedBy = userId
+            };
+
+            var created = await _chatService.CreateChatAsync(chat);
+            return Ok(created);
         }
     }
 }

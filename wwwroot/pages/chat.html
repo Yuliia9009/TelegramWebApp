@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram</title>
+    <link rel="stylesheet" href="css/chat.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Левая панель -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="menu-avatar-wrapper">
+                    <img src="img/default-avatar.png" alt="Avatar" class="avatar" id="menuAvatar">
+                    <div class="dropdown-menu" id="dropdownMenu">
+                        <div class="dropdown-item" id="editProfile">👤 Редактировать профиль</div>
+                        <div class="dropdown-item" id="addFriend">➕ Добавить аккаунт</div>
+                        <div class="dropdown-item" id="features">💡 Возможности Telegram</div>
+                        <div class="dropdown-item" id="logout">🚪 Выход</div>
+                    </div>
+                </div>
+                <input type="text" placeholder="Поиск..." class="search-input">
+            </div>
+            <ul class="chat-list" id="contactList">
+                <!-- Контакты загружаются сюда -->
+            </ul>
+        </aside>
+
+        <!-- Правая панель -->
+        <main class="chat-panel">
+            <div class="chat-header">
+                <button id="backBtn" class="back-btn">← Назад</button>
+                <h2 id="chatTitle">Чат</h2>
+            </div>
+            <div class="chat-messages" id="messages"></div>
+
+            <div class="chat-composer">
+                <input type="file" id="fileInput" hidden>
+                <button id="sendFileBtn" class="icon-btn">📎</button>
+                <input type="text" id="messageInput" placeholder="Сообщение...">
+                <button id="sendBtn">Отправить</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Редактирование профиля -->
+    <div class="modal" id="profileModal">
+        <div class="modal-content">
+            <h3>Редактировать профиль</h3>
+
+            <label for="avatarInput">Аватар</label><br />
+            <img id="avatarPreview" src="img/default-avatar.png" alt="Avatar Preview" class="avatar-preview" />
+            <input type="file" id="avatarInput" accept="image/*" /><br /><br />
+
+            <label for="nicknameInput">Никнейм</label>
+            <input type="text" id="nicknameInput" /><br />
+
+            <label for="birthdateInput">Дата рождения</label>
+            <input type="date" id="birthdateInput" /><br />
+
+            <label for="phoneInputEdit">Телефон</label>
+            <input type="text" id="phoneInputEdit" readonly /><br />
+
+            <div class="modal-actions">
+                <button id="saveProfileBtn">Сохранить</button>
+                <button id="closeProfileModal">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

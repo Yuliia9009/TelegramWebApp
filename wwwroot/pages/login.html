@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Telegram • Вход</title>
+    <link rel="stylesheet" href="css/login.css" />
+</head>
+
+<body>
+    <div class="tg-wrapper">
+        <div class="tg-login-card">
+            <img src="media/telegram_logo.svg.png" alt="Telegram" class="tg-logo" />
+            <h2>Войти в Telegram</h2>
+            <p class="tg-subtext">Проверьте код страны и введите свой номер телефона.</p>
+
+            <div class="form-group">
+                <label for="countrySelect">Страна</label>
+                <select id="countrySelect"></select>
+            </div>
+
+            <div class="form-group">
+                <label for="phoneInput">Номер телефона</label>
+                <input type="text" id="phoneInput" />
+            </div>
+
+            <button id="sendCodeBtn">Далее</button>
+
+            <p class="tg-footer">Ваш номер будет использоваться для входа в систему.</p>
+            <p class="tg-qr">Вход по QR-коду</p>
+        </div>
+    </div>
+
+    <script type="module" src="js/router.js"></script>
+</body>
+
+</html>

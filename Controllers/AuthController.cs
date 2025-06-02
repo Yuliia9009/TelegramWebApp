@@ -40,44 +40,44 @@ namespace TelegramWebAPI.Controllers
             return Ok(new { message = "Code sent successfully (mock)." });
         }
 
-        [HttpPost("verify-code")]
-        public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeRequest request)
-        {
-            Console.WriteLine($"📲 Phone: {request.PhoneNumber}, Code: {request.Code}");
-
-            if (!otpStore.TryGetValue(request.PhoneNumber, out var code) || code != request.Code)
-                return Unauthorized("Invalid code.");
-
-            var user = _context.Users.FirstOrDefault(u => u.PhoneNumber == request.PhoneNumber);
-
-            if (user == null)
+            [HttpPost("verify-code")]
+            public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeRequest request)
             {
-                user = new User
+                Console.WriteLine($"📲 Phone: {request.PhoneNumber}, Code: {request.Code}");
+
+                if (!otpStore.TryGetValue(request.PhoneNumber, out var code) || code != request.Code)
+                    return Unauthorized("Invalid code.");
+
+                var user = _context.Users.FirstOrDefault(u => u.PhoneNumber == request.PhoneNumber);
+
+                if (user == null)
                 {
-                    Id = Guid.NewGuid(),
-                    PhoneNumber = request.PhoneNumber,
-                    Nickname = $"User_{Guid.NewGuid().ToString()[..6]}",
-                    DateOfBirth = DateTime.UtcNow,
-                    PasswordHash = _passwordHasher.HashPassword(null, Guid.NewGuid().ToString())
-                };
+                    user = new User
+                    {
+                        Id = Guid.NewGuid(),
+                        PhoneNumber = request.PhoneNumber,
+                        Nickname = $"User_{Guid.NewGuid().ToString()[..6]}",
+                        DateOfBirth = DateTime.UtcNow,
+                        PasswordHash = _passwordHasher.HashPassword(null, Guid.NewGuid().ToString())
+                    };
 
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
-            }
-
-            var token = _jwtService.GenerateToken(user);
-
-            return Ok(new
-            {
-                token,
-                user = new
-                {
-                    user.Id,
-                    user.Nickname,
-                    user.PhoneNumber
+                    _context.Users.Add(user);
+                    await _context.SaveChangesAsync();
                 }
-            });
-        }
+
+                var token = _jwtService.GenerateToken(user);
+
+                return Ok(new
+                {
+                    token,
+                    user = new
+                    {
+                        user.Id,
+                        user.Nickname,
+                        user.PhoneNumber
+                    }
+                });
+            }
 
         [HttpPost("complete-registration")]
         public async Task<IActionResult> CompleteRegistration([FromBody] CompleteRegistrationRequest request)
