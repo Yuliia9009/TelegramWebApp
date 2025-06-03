@@ -8,7 +8,7 @@ using TelegramWebAPI.Services.Interfaces;
 
 namespace TelegramWebAPI.Hubs
 {
-    [Authorize]
+    // [Authorize]
     public class ChatHub : Hub
     {
         private readonly IChatMessageRepository _messageRepository;

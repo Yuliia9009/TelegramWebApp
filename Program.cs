@@ -49,11 +49,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", b =>
     {
-        b
-        .AllowAnyOrigin() 
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials(); // важно для SignalR
+        b.WithOrigins("http://localhost:5032") // или твой фронтенд адрес
+         .AllowAnyHeader()
+         .AllowAnyMethod()
+         .AllowCredentials(); // нужно для SignalR с авторизацией
     });
 });
 
@@ -139,10 +138,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // 6. Endpoints
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapControllers();
-    endpoints.MapHub<ChatHub>("/chatHub"); // важно
-});
+app.MapControllers();
+app.MapHub<ChatHub>("/chatHub");
 
 app.Run();

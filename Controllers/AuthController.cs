@@ -40,13 +40,19 @@ namespace TelegramWebAPI.Controllers
             return Ok(new { message = "Code sent successfully (mock)." });
         }
 
-            [HttpPost("verify-code")]
-            public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeRequest request)
+        [HttpPost("verify-code")]
+        public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeRequest request)
+        {
+            try
             {
-                Console.WriteLine($"📲 Phone: {request.PhoneNumber}, Code: {request.Code}");
+                if (!ModelState.IsValid)
+                    return BadRequest("Неверный формат запроса.");
 
-                if (!otpStore.TryGetValue(request.PhoneNumber, out var code) || code != request.Code)
-                    return Unauthorized("Invalid code.");
+                if (!otpStore.TryGetValue(request.PhoneNumber, out var storedCode))
+                    return Unauthorized("Код не найден или срок действия истёк.");
+
+                if (storedCode != request.Code)
+                    return Unauthorized("Неверный код.");
 
                 var user = _context.Users.FirstOrDefault(u => u.PhoneNumber == request.PhoneNumber);
 
@@ -78,6 +84,12 @@ namespace TelegramWebAPI.Controllers
                     }
                 });
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Ошибка при верификации: {ex.Message}");
+                return StatusCode(500, "Ошибка сервера. Попробуйте позже.");
+            }
+        }
 
         [HttpPost("complete-registration")]
         public async Task<IActionResult> CompleteRegistration([FromBody] CompleteRegistrationRequest request)

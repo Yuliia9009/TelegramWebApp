@@ -61,7 +61,8 @@ export function initMessaging(token, currentUserId) {
   };
 
   const connection = new signalR.HubConnectionBuilder()
-    .withUrl("/chatHub", { accessTokenFactory: () => token })
+  .withUrl("http://localhost:5032/chatHub", { accessTokenFactory: () => token })  
+  // .withUrl("/chatHub", { accessTokenFactory: () => token })
     .build();
 
   connection.on("ReceiveMessage", message => {
