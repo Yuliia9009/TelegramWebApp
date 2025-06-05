@@ -3,13 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using TelegramWebAPI.Data;
 using TelegramWebAPI.Models;
+using TelegramWebAPI.Models.Requests;
+using TelegramWebAPI.Models.Chat;
+using TelegramWebAPI.Services.Interfaces;
 using System.Security.Claims;
-using System.Threading.Tasks;
-using System;
-using System.Linq;
-using TelegramWebAPI.Models.Requests; 
-using TelegramWebAPI.Services.Interfaces; 
-using TelegramWebAPI.Models.Chat;  
 
 namespace TelegramWebAPI.Controllers
 {
@@ -30,9 +27,8 @@ namespace TelegramWebAPI.Controllers
         [HttpPost("add")]
         public async Task<IActionResult> AddFriend([FromBody] AddFriendRequest model)
         {
-
             if (string.IsNullOrWhiteSpace(model.PhoneNumber))
-            return BadRequest("Номер телефона обязателен"); 
+                return BadRequest("Номер телефона обязателен");
 
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!Guid.TryParse(userId, out var myId))
@@ -42,7 +38,7 @@ namespace TelegramWebAPI.Controllers
             if (friend == null || friend.Id == myId)
                 return NotFound("Пользователь не найден");
 
-            bool alreadyFriends = await _db.Friendships.AnyAsync(f =>
+            var alreadyFriends = await _db.Friendships.AnyAsync(f =>
                 f.UserId == myId && f.FriendId == friend.Id);
 
             if (alreadyFriends)
@@ -51,7 +47,6 @@ namespace TelegramWebAPI.Controllers
             _db.Friendships.Add(new Friendship { UserId = myId, FriendId = friend.Id });
             await _db.SaveChangesAsync();
 
-            // Создание приватного чата
             var existingChat = await _chatService.GetOrCreatePrivateChatAsync(myId.ToString(), friend.Id.ToString());
             if (existingChat == null)
             {
@@ -84,7 +79,8 @@ namespace TelegramWebAPI.Controllers
 
             var friends = await _db.Users
                 .Where(u => friendIds.Contains(u.Id))
-                .Select(u => new {
+                .Select(u => new
+                {
                     u.Id,
                     u.Nickname,
                     u.PhoneNumber,

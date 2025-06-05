@@ -19,15 +19,13 @@ namespace TelegramWebAPI.Services
             // Console.WriteLine($"SignalR подключен к: {_settings.ConnectionString}");
         }
 
-        /// Отправить сообщение конкретному пользователю по userId (тот, что присваивается в токене)
+        // Отправить сообщение конкретному пользователю по userId (тот, что присваивается в токене)
         public Task SendToUserAsync(string userId, object message)
         {
             return _hubContext.Clients.User(userId).SendAsync("ReceiveMessage", message);
         }
 
-        /// <summary>
-        /// Отправить сообщение в группу (например, чат с ChatId)
-        /// </summary>
+        // Отправить сообщение в группу (например, чат с ChatId)
         public Task SendToGroupAsync(string groupId, object message)
         {
             return _hubContext.Clients.Group(groupId).SendAsync("ReceiveMessage", message);

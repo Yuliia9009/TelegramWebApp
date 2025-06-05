@@ -18,8 +18,24 @@ namespace TelegramWebAPI.Services
 
         public async Task SaveMessageAsync(Message message)
         {
+            // Валидация перед сохранением
+            if (string.IsNullOrWhiteSpace(message.Id))
+                message.Id = Guid.NewGuid().ToString();
+
+            if (string.IsNullOrWhiteSpace(message.ChatId))
+                throw new ArgumentException("ChatId is required for the message.");
+
+            if (string.IsNullOrWhiteSpace(message.Text))
+                throw new ArgumentException("Text is required for the message.");
+
+            if (message.SentAt == default)
+                message.SentAt = DateTime.UtcNow;
+
+            Console.WriteLine($"📝 Сохраняем сообщение: Id={message.Id}, ChatId={message.ChatId}, Sender={message.SenderId}, Text={message.Text}");
+
             await _container.CreateItemAsync(message, new PartitionKey(message.ChatId));
         }
+
         public async Task<Message?> GetMessageByIdAsync(string chatId, string messageId)
         {
             try
@@ -32,8 +48,17 @@ namespace TelegramWebAPI.Services
                 return null;
             }
         }
+
         public async Task<Message> UpdateMessageAsync(Message message)
         {
+            if (string.IsNullOrWhiteSpace(message.Id))
+                throw new ArgumentException("Message Id is required for update.");
+
+            if (string.IsNullOrWhiteSpace(message.ChatId))
+                throw new ArgumentException("ChatId is required for update.");
+
+            Console.WriteLine($"✏️ Обновление сообщения: Id={message.Id}, ChatId={message.ChatId}, NewText={message.Text}");
+
             var response = await _container.ReplaceItemAsync(
                 message,
                 message.Id,
@@ -46,12 +71,10 @@ namespace TelegramWebAPI.Services
         {
             var message = await GetMessageByIdAsync(chatId, messageId);
             if (message == null)
-            {
                 throw new Exception("Message not found");
-            }
 
             message.Text = newText;
-            message.EditedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss");
+            message.EditedAt = DateTime.UtcNow.ToString("o");
 
             return await UpdateMessageAsync(message);
         }

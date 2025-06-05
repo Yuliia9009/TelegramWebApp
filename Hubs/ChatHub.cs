@@ -8,7 +8,7 @@ using TelegramWebAPI.Services.Interfaces;
 
 namespace TelegramWebAPI.Hubs
 {
-    // [Authorize]
+    [Authorize]
     public class ChatHub : Hub
     {
         private readonly IChatMessageRepository _messageRepository;
@@ -20,14 +20,10 @@ namespace TelegramWebAPI.Hubs
             _dbContext = dbContext;
         }
 
-        public async Task SendMessage(string user, string message)
-        {
-            await Clients.All.SendAsync("ReceiveMessage", user, message);
-        }
-
         public async Task JoinChat(string chatId)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, chatId);
+            Console.WriteLine($"👥 Подключение {Context.ConnectionId} присоединилось к чату {chatId}");
         }
 
         public async Task LeaveChat(string chatId)
@@ -41,7 +37,7 @@ namespace TelegramWebAPI.Hubs
             message.SentAt = DateTime.UtcNow;
             message.IsRead = false;
 
-            // Устанавливаем тип сообщения
+            // Определяем тип сообщения
             if (!string.IsNullOrWhiteSpace(message.Text))
                 message.Type = MessageType.Text;
             else if (message.Text?.EndsWith(".mp3") == true)
@@ -64,7 +60,11 @@ namespace TelegramWebAPI.Hubs
 
         public override async Task OnConnectedAsync()
         {
+            Console.WriteLine("🔌 OnConnectedAsync вызван");
+
             var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            Console.WriteLine($"🆔 Пользователь: {userId ?? "❌ не найден"}");
+
             if (Guid.TryParse(userId, out var guid))
             {
                 var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == guid);
@@ -72,6 +72,10 @@ namespace TelegramWebAPI.Hubs
                 {
                     user.IsOnline = true;
                     await _dbContext.SaveChangesAsync();
+
+                    // 🔔 Уведомить всех, что пользователь онлайн
+                    await Clients.All.SendAsync("UserCameOnline", userId); // или
+                    await Clients.All.SendAsync("UserWentOffline", userId);
                 }
             }
 
@@ -88,6 +92,9 @@ namespace TelegramWebAPI.Hubs
                 {
                     user.IsOnline = false;
                     await _dbContext.SaveChangesAsync();
+
+                    // 🔕 Уведомить всех, что пользователь оффлайн
+                    await Clients.All.SendAsync("UserWentOffline", user.Id.ToString());
                 }
             }
 
@@ -100,8 +107,8 @@ namespace TelegramWebAPI.Hubs
             if (message == null) return;
 
             message.DeliveredAt ??= DateTime.UtcNow;
-
             await _messageRepository.UpdateMessageAsync(message);
+
             await Clients.Group(chatId).SendAsync("MessageDelivered", messageId, message.DeliveredAt);
         }
 
@@ -112,8 +119,8 @@ namespace TelegramWebAPI.Hubs
 
             message.IsRead = true;
             message.ReadAt ??= DateTime.UtcNow;
-
             await _messageRepository.UpdateMessageAsync(message);
+
             await Clients.Group(chatId).SendAsync("MessageRead", messageId, message.ReadAt);
         }
     }

@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using TelegramWebAPI.Data;
 using TelegramWebAPI.Models;
 using TelegramWebAPI.Models.Requests;
-using System.Security.Claims;
 using TelegramWebAPI.Services.Interfaces;
 
 namespace TelegramWebAPI.Controllers
@@ -24,9 +24,9 @@ namespace TelegramWebAPI.Controllers
         [HttpGet("me")]
         public async Task<IActionResult> GetMyProfile()
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var guid))
-                return Unauthorized("Не удалось получить идентификатор пользователя из токена");
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userId, out var guid))
+                return Unauthorized("Не удалось получить ID из токена");
 
             var user = await _db.Users.FindAsync(guid);
             return user == null ? NotFound("Пользователь не найден") : Ok(user);
@@ -47,9 +47,9 @@ namespace TelegramWebAPI.Controllers
 
             if (!string.IsNullOrWhiteSpace(request.Nickname))
                 user.Nickname = request.Nickname;
+
             if (request.DateOfBirth.HasValue)
                 user.DateOfBirth = request.DateOfBirth.Value;
-            // user.PhoneNumber = request.PhoneNumber;
 
             await _db.SaveChangesAsync();
             return Ok(user);
@@ -70,9 +70,9 @@ namespace TelegramWebAPI.Controllers
         [HttpPut("me")]
         public async Task<IActionResult> UpdateCurrentUser([FromBody] UpdateUserRequest request)
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var guid))
-                return Unauthorized("Не удалось получить идентификатор пользователя из токена");
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userId, out var guid))
+                return Unauthorized("Неверный идентификатор пользователя");
 
             var user = await _db.Users.FindAsync(guid);
             if (user == null) return NotFound("Пользователь не найден");
@@ -90,15 +90,6 @@ namespace TelegramWebAPI.Controllers
             return Ok(user);
         }
 
-        [HttpGet("{id}/status")]
-        public async Task<IActionResult> GetOnlineStatus(Guid id)
-        {
-            var user = await _db.Users.FindAsync(id);
-            if (user == null) return NotFound();
-
-            return Ok(new { isOnline = user.IsOnline });
-        }
-
         [Authorize]
         [HttpPost("me/avatar")]
         public async Task<IActionResult> UploadAvatar(IFormFile file, [FromServices] IBlobStorageService blobService)
@@ -106,7 +97,7 @@ namespace TelegramWebAPI.Controllers
             if (file == null || file.Length == 0)
                 return BadRequest("Файл не выбран");
 
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userId, out var guid))
                 return Unauthorized();
 
@@ -114,7 +105,7 @@ namespace TelegramWebAPI.Controllers
             if (user == null)
                 return NotFound();
 
-            var ext = Path.GetExtension(file.FileName); // например, .png
+            var ext = Path.GetExtension(file.FileName);
             var fileName = $"avatars/{user.Id}{ext}";
 
             using var stream = file.OpenReadStream();
@@ -130,17 +121,24 @@ namespace TelegramWebAPI.Controllers
         [HttpGet("friends")]
         public async Task<IActionResult> GetFriends()
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userId, out var guid))
-                return Unauthorized("Не удалось определить пользователя");
+                return Unauthorized();
 
             var currentUser = await _db.Users.FindAsync(guid);
             if (currentUser == null)
                 return NotFound("Пользователь не найден");
 
-            // 🔧 Простой вариант — вернуть всех, кроме себя
+            // Найти ID пользователей, с которыми есть личные чаты
+            var privateChatUserIds = await _db.Chats
+                .Where(c => !c.IsGroup && c.Participants.Contains(guid.ToString()))
+                .SelectMany(c => c.Participants)
+                .Where(pid => pid != guid.ToString())
+                .Distinct()
+                .ToListAsync();
+
             var friends = await _db.Users
-                .Where(u => u.Id != guid)
+                .Where(u => privateChatUserIds.Contains(u.Id.ToString()))
                 .Select(u => new
                 {
                     u.Id,
@@ -152,6 +150,44 @@ namespace TelegramWebAPI.Controllers
                 .ToListAsync();
 
             return Ok(friends);
+        }
+        [Authorize]
+        [HttpPost("add-friend/{friendId}")]
+        public async Task<IActionResult> AddFriend(Guid friendId, [FromServices] IChatService chatService)
+        {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(currentUserId, out var guid))
+                return Unauthorized("Неверный ID пользователя");
+
+            if (guid == friendId)
+                return BadRequest("Нельзя добавить самого себя в друзья");
+
+            var friend = await _db.Users.FindAsync(friendId);
+            if (friend == null)
+                return NotFound("Пользователь не найден");
+
+            // Проверка: есть ли уже личный чат
+            var existingChat = await chatService.GetOrCreateChatAsync(guid.ToString(), friendId.ToString());
+            if (existingChat == null)
+                return StatusCode(500, "Не удалось создать чат");
+
+            return Ok(new { message = "Друг добавлен", chatId = existingChat.Id });
+        }
+        [Authorize]
+        [HttpGet("{id}/status")]
+        public async Task<IActionResult> GetUserStatus(Guid id)
+        {
+            var user = await _db.Users.FindAsync(id);
+            if (user == null)
+                return NotFound();
+
+            return Ok(new
+            {
+                user.Id,
+                user.Nickname,
+                user.AvatarUrl,
+                IsOnline = user.IsOnline
+            });
         }
     }
 }

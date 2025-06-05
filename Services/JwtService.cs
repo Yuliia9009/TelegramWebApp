@@ -23,7 +23,8 @@ namespace TelegramWebAPI.Services
         {
             var claims = new[]
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()), // стандартный sub
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),   // для .NET Identity
                 new Claim(ClaimTypes.Name, user.Nickname ?? ""),
                 new Claim("phone", user.PhoneNumber ?? "")
             };

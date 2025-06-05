@@ -11,7 +11,9 @@ namespace TelegramWebAPI.Services.Interfaces
         Task<Message> SendMessageAsync(Message message);
         Task<IEnumerable<Message>> GetMessagesAsync(string chatId);
         Task<Message?> GetMessageByIdAsync(string chatId, string messageId);
-        Task<Message> UpdateMessageAsync(string messageId, string newText);
+        Task<Message> UpdateMessageAsync(string chatId, string messageId, string newText);
         Task<Chat?> GetOrCreatePrivateChatAsync(string user1Id, string user2Id);
+        Task<Chat> GetOrCreateChatAsync(string userId1, string userId2);
+        Task<Chat> GetChatByIdAsync(string chatId);
     }
 }

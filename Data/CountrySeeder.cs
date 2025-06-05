@@ -12,14 +12,14 @@ public class CountrySeeder
 
     public void SeedCountries()
     {
-        var rawData = File.ReadAllText("countries_raw.txt"); // 👉 сюда вставь весь список
+        var rawData = File.ReadAllText("countries_raw.txt"); 
         var lines = rawData.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
         var countries = new List<Country>();
 
         foreach (var line in lines)
         {
-            var parts = line.Split('\t'); // предполагаем, что столбцы разделены табуляцией
+            var parts = line.Split('\t'); 
 
             if (parts.Length < 3)
                 continue;

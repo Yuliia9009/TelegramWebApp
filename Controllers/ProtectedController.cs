@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace TelegramWebAPI.Controllers
 {
@@ -11,10 +12,19 @@ namespace TelegramWebAPI.Controllers
         [HttpGet("whoami")]
         public IActionResult WhoAmI()
         {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var nickname = User.FindFirst(ClaimTypes.Name)?.Value;
+            var phone = User.FindFirst("phone")?.Value;
+
             return Ok(new
             {
                 message = "✅ Доступ разрешён",
-                user = User.Identity?.Name
+                user = new
+                {
+                    id = userId,
+                    nickname,
+                    phone
+                }
             });
         }
     }

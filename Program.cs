@@ -49,7 +49,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", b =>
     {
-        b.WithOrigins("http://localhost:5032") // или твой фронтенд адрес
+        b.WithOrigins("http://localhost:5032") 
          .AllowAnyHeader()
          .AllowAnyMethod()
          .AllowCredentials(); // нужно для SignalR с авторизацией
@@ -75,6 +75,23 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = config["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]!))
     };
+
+    // ✅ ДЛЯ SignalR: подтягиваем токен из query string
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chatHub"))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
+    };
 });
 
 // 5. Entity Framework (SQL)
@@ -90,7 +107,6 @@ builder.Services.AddSingleton<CosmosClient>(sp =>
 });
 
 builder.Services.AddSingleton<CosmosDbService>();
-builder.Services.AddSingleton<IChatService, ChatService>();
 
 // 7. Azure Blob Storage
 builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
@@ -114,17 +130,20 @@ builder.Services.Configure<SignalRSettings>(builder.Configuration.GetSection("Az
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
+// 12. Чат
+builder.Services.AddScoped<IChatService, ChatService>();
+
 var app = builder.Build();
 
 // Middleware
-// 1. Swagger (можно оставить как есть)
+// 1. Swagger
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// 2. Статические файлы (если используешь wwwroot)
+// 2. Статические файлы (wwwroot)
 app.UseStaticFiles();
 
 // 3. Routing обязательно до CORS, Auth и MapHub
@@ -140,5 +159,6 @@ app.UseAuthorization();
 // 6. Endpoints
 app.MapControllers();
 app.MapHub<ChatHub>("/chatHub");
+app.MapHub<UserStatusHub>("/statusHub");
 
 app.Run();

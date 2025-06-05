@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TelegramWebAPI.Models;
+using TelegramWebAPI.Models.Chat;
 
 namespace TelegramWebAPI.Data
 {
@@ -9,8 +10,9 @@ namespace TelegramWebAPI.Data
             : base(options) { }
 
         public DbSet<User> Users { get; set; }
-
         public DbSet<Friendship> Friendships { get; set; }
         public DbSet<Country> Countries { get; set; }
+        public DbSet<Chat> Chats { get; set; }
+        
     }
 }

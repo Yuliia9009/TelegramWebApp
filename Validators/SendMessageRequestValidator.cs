@@ -7,8 +7,8 @@ namespace TelegramWebAPI.Validators
     {
         public SendMessageRequestValidator()
         {
-            RuleFor(x => x.ChatId)
-                .NotEmpty().WithMessage("ChatId обязателен");
+            // RuleFor(x => x.ChatId)
+            //     .NotEmpty().WithMessage("ChatId обязателен");
 
             RuleFor(x => x.Text)
                 .NotEmpty().WithMessage("Текст сообщения обязателен")

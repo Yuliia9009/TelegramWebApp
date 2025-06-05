@@ -2,6 +2,7 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Options;
 using TelegramWebAPI.Models;
 using TelegramWebAPI.Settings;
+using TelegramWebAPI.Models.Chat;
 
 namespace TelegramWebAPI.Services
 {
@@ -9,6 +10,7 @@ namespace TelegramWebAPI.Services
     {
         private readonly Container _messageContainer;
         private readonly Container _chatContainer;
+        private readonly CosmosDbService _cosmosDbService;
 
         public CosmosDbService(IOptions<AzureCosmosDbSettings> options)
         {
@@ -34,11 +36,25 @@ namespace TelegramWebAPI.Services
         public Container GetMessageContainer() => _messageContainer;
         public Container GetChatContainer() => _chatContainer;
 
-        public async Task<TestMessage> SaveTestMessageAsync()
+        // public async Task<TestMessage> SaveTestMessageAsync()
+        // {
+        //     var message = new TestMessage();
+        //     await _messageContainer.CreateItemAsync(message, new PartitionKey(message.chatId));
+        //     return message;
+        // }
+        public async Task<Chat?> GetChatByIdAsync(string chatId)
         {
-            var message = new TestMessage();
-            await _messageContainer.CreateItemAsync(message, new PartitionKey(message.chatId));
-            return message;
+            var query = new QueryDefinition("SELECT * FROM c WHERE c.id = @id")
+                .WithParameter("@id", chatId);
+
+            var iterator = _chatContainer.GetItemQueryIterator<Chat>(query);
+            if (iterator.HasMoreResults)
+            {
+                var response = await iterator.ReadNextAsync();
+                return response.FirstOrDefault();
+            }
+
+            return null;
         }
     }
 }

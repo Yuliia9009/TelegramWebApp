@@ -4,6 +4,8 @@ using TelegramWebAPI.Data;
 using TelegramWebAPI.Models;
 using TelegramWebAPI.Models.Requests;
 using TelegramWebAPI.Services.Interfaces;
+using System.Collections.Concurrent;
+using Microsoft.EntityFrameworkCore;
 
 namespace TelegramWebAPI.Controllers
 {
@@ -11,7 +13,7 @@ namespace TelegramWebAPI.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private static readonly Dictionary<string, string> otpStore = new(); // временное хранилище OTP
+        private static readonly ConcurrentDictionary<string, string> otpStore = new();
         private readonly ApplicationDbContext _context;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IJwtService _jwtService;
@@ -33,7 +35,7 @@ namespace TelegramWebAPI.Controllers
                 return BadRequest("Phone number is required.");
 
             var code = new Random().Next(100000, 999999).ToString();
-            otpStore[request.PhoneNumber] = code;
+            otpStore[request.PhoneNumber.ToLower()] = code;
 
             Console.WriteLine($"[DEBUG] OTP for {request.PhoneNumber}: {code}");
 
@@ -48,13 +50,17 @@ namespace TelegramWebAPI.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest("Неверный формат запроса.");
 
-                if (!otpStore.TryGetValue(request.PhoneNumber, out var storedCode))
+                var normalizedPhone = request.PhoneNumber.ToLower();
+
+                if (!otpStore.TryGetValue(normalizedPhone, out var storedCode))
                     return Unauthorized("Код не найден или срок действия истёк.");
 
                 if (storedCode != request.Code)
                     return Unauthorized("Неверный код.");
 
-                var user = _context.Users.FirstOrDefault(u => u.PhoneNumber == request.PhoneNumber);
+                otpStore.TryRemove(normalizedPhone, out _); // Удалить код после использования
+
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
 
                 if (user == null)
                 {
@@ -62,7 +68,7 @@ namespace TelegramWebAPI.Controllers
                     {
                         Id = Guid.NewGuid(),
                         PhoneNumber = request.PhoneNumber,
-                        Nickname = $"User_{Guid.NewGuid().ToString()[..6]}",
+                        Nickname = $"User_{Guid.NewGuid():N}"[..6],
                         DateOfBirth = DateTime.UtcNow,
                         PasswordHash = _passwordHasher.HashPassword(null, Guid.NewGuid().ToString())
                     };
@@ -94,7 +100,7 @@ namespace TelegramWebAPI.Controllers
         [HttpPost("complete-registration")]
         public async Task<IActionResult> CompleteRegistration([FromBody] CompleteRegistrationRequest request)
         {
-            var user = _context.Users.FirstOrDefault(u => u.PhoneNumber == request.PhoneNumber);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
             if (user == null)
                 return BadRequest("User not found.");
 

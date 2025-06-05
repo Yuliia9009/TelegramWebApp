@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace TelegramWebAPI.Models.Chat
 {
-    using Newtonsoft.Json;
 
     public class Chat
     {

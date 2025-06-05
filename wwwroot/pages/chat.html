@@ -30,12 +30,14 @@
         </aside>
 
         <!-- Правая панель -->
-        <main class="chat-panel">
+        <main class="chat-panel" id="chatPanel" data-chat-user-id="">
             <div class="chat-header">
-                <button id="backBtn" class="back-btn">← Назад</button>
-                <h2 id="chatTitle">Чат</h2>
+                <button id="backBtn" class="back-btn">←</button>
+                <div class="chat-header-info">
+                    <h2 id="chatTitle">Чат</h2>
+                    <div id="user-status">Статус: неизвестно</div>
+                </div>
             </div>
-            <div class="chat-messages" id="messages"></div>
 
             <div class="chat-composer">
                 <input type="file" id="fileInput" hidden>
