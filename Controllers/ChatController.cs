@@ -134,10 +134,18 @@ namespace TelegramWebAPI.Controllers
             Console.WriteLine($"🔎 Поиск/создание чата между {currentUserId} и {userId}");
 
             var chat = await _chatService.GetOrCreateChatAsync(currentUserId, userId);
-            return Ok(chat);
+
+            var otherUserId = chat.Participants.FirstOrDefault(p => p != currentUserId);
+
+            return Ok(new
+            {
+                chat.Id,
+                chat.IsGroup,
+                otherUserId,
+                chat.Name
+            });
         }
 
-        // Изменён маршрут, чтобы избежать конфликтов
         [HttpGet("by-id/{id}")]
         public async Task<IActionResult> GetChatById(string id)
         {

@@ -4,7 +4,7 @@ import { initChatPage } from "./chat/chat.js";
 
 const app = document.getElementById("app");
 
-export async function loadPage(page) {
+export async function loadPage(page, data = null) {
   try {
     const res = await fetch(`pages/${page}.html`);
     if (!res.ok) throw new Error(`Не удалось загрузить страницу: ${page}`);
@@ -16,7 +16,23 @@ export async function loadPage(page) {
     } else if (page === "otp") {
       initOtpPage();
     } else if (page === "chat") {
-      initChatPage();
+      initChatPage(data);
+
+      // ⏳ Ждём, пока появится элемент #messages
+      const waitForMessages = () =>
+        new Promise(resolve => {
+          const check = () => {
+            if (document.getElementById("messages")) resolve();
+            else setTimeout(check, 30);
+          };
+          check();
+        });
+
+      await waitForMessages();
+
+      if (data?.userId && typeof window.openChat === "function") {
+        window.openChat(data.userId, true);
+      }
     }
   } catch (err) {
     console.error("❌ Ошибка при загрузке страницы:", err);

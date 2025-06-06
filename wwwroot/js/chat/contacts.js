@@ -1,3 +1,5 @@
+import { loadPage } from "../router.js";
+
 export function initContacts(token, currentUserId) {
   console.log("🔑 TOKEN:", token);
   fetch("/api/friends", {
@@ -43,13 +45,13 @@ export function initContacts(token, currentUserId) {
           `;
 
           li.onclick = () => {
-            try {
-              console.log("💬 Открывается чат с пользователем:", u.id);
-              window.openChat(u.id, true);
-            } catch (e) {
-              console.error("Ошибка при открытии чата:", e);
-            }
-          };
+          try {
+            console.log("💬 Переход к чату с пользователем:", u.id);
+            loadPage("chat", { userId: u.id });
+          } catch (e) {
+            console.error("Ошибка при открытии чата:", e);
+          }
+        };
 
           ul.appendChild(li);
         });
